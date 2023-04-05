@@ -60,6 +60,7 @@ function init() {
             clip: [-19, 5, -10, 8, 12, 100]
         },
         models: [
+            // Add models here
             {
                 type: 'generic',
                 vertices: [
