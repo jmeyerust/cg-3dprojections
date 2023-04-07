@@ -5,6 +5,44 @@ function mat4x4Perspective(prp, srp, vup, clip) {
     // 3. shear such that CW is on the z-axis
     // 4. scale such that view volume bounds are ([z,-z], [z,-z], [-1,zmin])
 
+    // Calculate nuv coords
+    let n = prp.subtract(srp).normalize();
+    let u = vup.cross(n).normalize();
+    let v = n.cross(u);
+
+    let CW = Vector3((clip[0]+clip[1])/2, (clip[2] + clip[3])/2, clip[4]);
+    let DOP = CW
+
+    // Create Transforms for canonical view  
+    let Tprp = new Matrix(4,4)
+    mat4x4Translate(Tprp, -prp.x, -prp.y, -prp.z)
+
+    let R = new Matrix(4,4)
+    R.values = [[u.x, u.y, u.z, 0],
+                [v.x, v.y, v.z, 0],
+                [n.x, n.y, n.z, 0],
+                [0, 0, 0, 1]];
+    
+    let SHpar = new Matrix(4,4);
+    mat4x4ShearXY(SHpar, -DOP.x/DOP.z, -DOP.y/DOP.z);
+    
+    let Tpar = new Matrix(4,4);
+    mat4x4Translate(Tpar, 0, 0, clip[4]);
+    
+    let Sparx = 2/(clip[1] - clip[0]);
+    let Spary = 2/(clip[3] - clip[2]);
+    let Sparz = 1/(clip[5] - clip[4]);
+    let Spar = new Matrix(4,4);
+    mat4x4Scale(Spar, Sparx, Spary, Sparz);
+    
+    //Multipling 
+    let transform = Matrix.multiply([R, Tprp]);
+    transform = Matrix.multiply([SHpar, transform]);
+    transform = Matrix.multiply([Tpar, transform]);
+    transform = Matrix.multiply([Spar, transform]);
+
+    return transform;
+
     // ...
     // let transform = Matrix.multiply([...]);
     // return transform;
@@ -74,9 +112,33 @@ function mat4x4RotateZ(mat4x4, theta) {
     mat4x4.values = [[Math.cos(theta*Math.PI / 180), -1*Math.sin(theta*Math.PI / 180), 0, 0],
                      [Math.sin(theta*Math.PI / 180), Math.cos(theta*Math.PI / 180), 0, 0],
                      [0, 0, 1, 0],
+                     [0, 0, 0, 1]];                  
+
+}
+
+// set values of existing 4x4 matrix to the rotate about x-axis matrix
+function mat4x4RotateXRad(mat4x4, theta) {
+    mat4x4.values = [[1, 0, 0, 0],
+                     [0, Math.cos(theta), -1*Math.sin(theta), 0],
+                     [0, Math.sin(theta), Math.cos(theta), 0],
                      [0, 0, 0, 1]];
 }
 
+// set values of existing 4x4 matrix to the rotate about y-axis matrix
+function mat4x4RotateYRad(mat4x4, theta) {
+    mat4x4.values = [[Math.cos(theta), 0, Math.sin(theta), 0],
+                     [0, 1, 0, 0],
+                     [-1*Math.sin(theta), 0, Math.cos(theta), 0],
+                     [0, 0, 0, 1]];
+}
+
+// set values of existing 4x4 matrix to the rotate about z-axis matrix
+function mat4x4RotateZRad(mat4x4, theta) {
+    mat4x4.values = [[Math.cos(theta), -1*Math.sin(theta), 0, 0],
+                     [Math.sin(theta), Math.cos(theta), 0, 0],
+                     [0, 0, 1, 0],
+                     [0, 0, 0, 1]];
+}
 // set values of existing 4x4 matrix to the shear parallel to the xy-plane matrix
 function mat4x4ShearXY(mat4x4, shx, shy) {
     mat4x4.values = [[1, 0, shx, 0],
