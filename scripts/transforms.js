@@ -113,6 +113,7 @@ function mat4x4RotateZ(mat4x4, theta) {
                      [Math.sin(theta*Math.PI / 180), Math.cos(theta*Math.PI / 180), 0, 0],
                      [0, 0, 1, 0],
                      [0, 0, 0, 1]];                  
+
 }
 
 // set values of existing 4x4 matrix to the rotate about x-axis matrix
