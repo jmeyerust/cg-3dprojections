@@ -109,8 +109,67 @@ class Renderer {
         let out0 = this.outcodePerspective(p0, z_min);
         let out1 = this.outcodePerspective(p1, z_min);
         
+        let dx = p1.x - p0.x;
+        let dy = p2.y - p2.y;
+        let dz = p3.z - p3.z;
+        if(out0 | out1 == 0){
+            result = line;
+        }
+        else if(out0 && out1 != 0){
+            result = null;
+        }
+        else{
+            if (out0 == 0){
+                t0 = 0;
+            }
+            else if(out0 == LEFT){
+                t0 = (p0.x + p0.z)/(dx - dz);
+            }
+            else if(out0 == RIGHT){
+                t0 = (p0.x + p0.z)/(-dx - dz);
+            }
+            else if(out0 == BOTTOM){
+                t0 = (-p0.y + p0.z)/(dy - dz);
+            }
+            else if(out0 == TOP){
+                t0 = (-p0.y + p0.z)/(dy - dz);
+            }
+            else if (out0 == NEAR){
+                t0 = (p0.z -z_min)/-dz;
+            }
+            else{
+                t0 = (-p0.z - 1)/dz;
+            }
 
-        
+
+            if (out1 == 0){
+                t1 = 0;
+            }
+            else if(out1 == LEFT){
+                t1 = (p1.x + p1.z)/(dx - dz);
+            }
+            else if(out1 == RIGHT){
+                t1 = (p1.x + p1.z)/(-dx - dz);
+            }
+            else if(out1 == BOTTOM){
+                t1 = (-p1.y + p1.z)/(dy - dz);
+            }
+            else if(out1 == TOP){
+                t1 = (-p1.y + p1.z)/(dy - dz);
+            }
+            else if (out1 == NEAR){
+                t1 = (p1.z -z_min)/-dz;
+            }
+            else{
+                t1 = (-p1.z - 1)/dz;
+            }
+            
+            newLine = {pt0: new Vector4(p0.x + t0*dx, p0.y + t0*dy, p0.z + t0*dz, 1),
+                       pt1: new Vector4(p1.x + t1*dx, p1.y + t1*dy, p1.z + t1*dz, 1)};
+            
+            result = this.clipLinePerspective(newLine, z_min);
+
+        } 
         // TODO: implement clipping here!
         
         return result;
