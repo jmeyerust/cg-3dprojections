@@ -54,11 +54,10 @@ function mat4x4Perspective(prp, srp, vup, clip) {
 // create a 4x4 matrix to project a perspective image on the z=-1 plane
 function mat4x4MPer() {
     let mper = new Matrix(4, 4);
-    mper.values = [[1, 0, 0, 0],
-                    [0, 1, 0, 0],
-                    [0, 0, 1, 0],
-                    [0, 0, -1, 0]];
-    // mper.values = ...;
+    mper.values = [[1, 0,  0, 0],
+                   [0, 1,  0, 0],
+                   [0, 0,  1, 0],
+                   [0, 0, -1, 0]];
     return mper;
 }
 
@@ -69,7 +68,9 @@ function mat4x4Viewport(width, height) {
                         [0, parseInt(height/2), 0, parseInt(height/2)],
                         [0, 0, 1, 0],
                         [0, 0, 0, 1]];
+                        
     // viewport.values = ...;
+
 
     return viewport;
 }
