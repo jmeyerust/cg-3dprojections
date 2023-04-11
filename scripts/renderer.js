@@ -37,22 +37,26 @@ class Renderer {
     
     //
     moveLeft() {
-
+        this.scene.prp[0] -= 1;
+        this.scene.srp[0] -= 1;
     }
     
     //
     moveRight() {
-
+        this.scene.prp[0] += 1;
+        this.scene.srp[0] += 1;
     }
     
     //
     moveBackward() {
-
+        this.scene.prp[2] += 1;
+        this.scene.srp[2] += 1;
     }
     
     //
     moveForward() {
-
+        this.scene.prp[2] -= 1;
+        this.scene.srp[2] -= 1;
     }
 
     //
@@ -61,15 +65,33 @@ class Renderer {
 
         console.log('draw()');
 
+        // Test:
+        for (let i=0; i<this.scene.models.length; i++) {
+            console.log(this.createVertexEdgeModel(this.scene.models[i]));
+        }
+
         // TODO: implement drawing here!
         // For each model
         //   * For each vertex
         //     * transform endpoints to canonical view volume
         //   * For each line segment in each edge
         //     * clip in 3D
+        //
+        //     Mine
         //     * project to 2D
         //     * translate/scale to viewport (i.e. window)
         //     * draw line
+
+        // Transform vertices, clip lines, scale, draw if not null
+        // Possibly make one function to decompose each type of model into vertices/edges and then use that for this part since it aligns w/
+        //      previous learnings
+
+        /*
+        for (let i=0; i<this.scene.models.length; i++) {
+           for (let j=0; i<this.scene.models[i].)
+        }
+        */
+
     }
 
     // Get outcode for a vertex
@@ -271,4 +293,149 @@ class Renderer {
         this.ctx.fillRect(x0 - 2, y0 - 2, 4, 4);
         this.ctx.fillRect(x1 - 2, y1 - 2, 4, 4);
     }
+
+    createVertexEdgeModel() {
+        for (let i=0; i<this.scene.models.length; i++) {
+            let original_model = this.scene.models[i];
+            let new_model;
+
+            if (original_model.type == "generic") {
+                new_model = original_model;
+
+            } else if (original_model.type == "cube") {
+                new_model = {
+                    type: "cube",
+                    vertices: [],
+                    edges: [],
+                    matrix: new Matrix(4,4),
+                    center: original_model.center,
+                    animation: original_model.animation
+                }
+
+                let width = original_model.width / 2
+                let height = original_model.height / 2
+                let depth = original_model.depth / 2
+
+                new_model.vertices.push(...[
+                    Vector4(-width, height, -depth, 1),
+                    Vector4(width, height, -depth, 1),
+                    Vector4(width, -height, -depth, 1),
+                    Vector4(-width, -height, -depth, 1),
+                    Vector4(-width, height, depth, 1),
+                    Vector4(width, height, depth, 1),
+                    Vector4(width, -height, depth, 1),
+                    Vector4(-width, -height, depth, 1),
+                    
+                ])
+
+                let translate = new Matrix(4, 4)
+                mat4x4Translate(translate, new_model.center.x, new_model.center.y, new_model.center.z)
+                for (let i = 0; i < new_model.vertices.length; i++) {
+                    new_model.vertices[i] = new Vector(Matrix.multiply([translate, new_model.vertices[i]]))
+                }
+                
+                new_model.edges.push(...[
+                    [0, 1, 2, 3, 0],
+                    [4, 5, 6, 7, 4],
+                    [0, 4],
+                    [1, 5],
+                    [2, 6],
+                    [3, 7]
+                ])
+                
+                console.log(new_model.vertices);
+                console.log(new_model.edges);
+
+                //return new_model;
+                
+            } else if (original_model.type == "cone") {
+                new_model = {
+                    type: "cone",
+                    vertices: [],
+                    edges: [],
+                    matrix: new Matrix(4, 4),
+                    center: original_model.center
+                }
+
+                let radius = original_model.radius;
+                let height = original_model.height;
+                let sides = original_model.sides;
+
+                let mult = Math.PI * 2
+                for (let i = 0; i < sides; i += 1) {
+                    let x = mult * (i / sides)
+                    let new_vertex = new Vector4(Math.sin(x) * radius, -(height / 2), Math.cos(x) * radius, 1)
+                    new_model.vertices.push(new_vertex)
+                }
+                
+                new_model.vertices.push(new Vector4(0, (height / 2), 0, 1))
+            
+                let translate = new Matrix(4, 4)
+                mat4x4Translate(translate, new_model.center.x, new_model.center.y, new_model.center.z) //translating to the center point
+                for (let i = 0; i < new_model.vertices.length; i++) {
+                    new_model.vertices[i] = new Vector(Matrix.multiply([translate, new_model.vertices[i]]))
+                }
+            
+                new_model.edges.push([...Array(sides).keys(), 0])
+            
+                for (let i = 0; i < new_model.vertices.length - 1; i++) {
+                    new_model.edges.push([i, new_model.vertices.length - 1])
+                }
+
+                //return new_model;
+
+            } else if (original_model.type == "cylinder") {
+                new_model = {
+                    type: "cylinder",
+                    vertices: [],
+                    edges: [],
+                    matrix: new Matrix(4, 4),
+                    center: original_model.center
+                }
+
+                let radius = original_model.radius;
+                let height = original_model.height;
+                let sides = original_model.sides;
+                
+                // Bottom vertices
+                let mult = Math.PI * 2
+                for (let i = 0; i < sides; i += 1) {
+                    let x = mult * (i / sides)
+                    let new_vertex = new Vector4(Math.sin(x) * radius, -(height / 2), Math.cos(x) * radius, 1)
+                    new_model.vertices.push(new_vertex)
+                }
+                // Top vertices
+                for (let i = 0; i < sides; i += 1) {
+                    let x = mult * (i / sides)
+                    let new_vertex = new Vector4(Math.sin(x) * radius, (height / 2), Math.cos(x) * radius,1)
+                    new_model.vertices.push(new_vertex)
+                }
+
+                let translate = new Matrix(4, 4)
+                mat4x4Translate(translate, new_model.center.x, new_model.center.y, new_model.center.z)
+                for (let i = 0; i < new_model.vertices.length; i++) {
+                    new_model.vertices[i] = new Vector(Matrix.multiply([translate, new_model.vertices[i]]))
+                }
+
+                let c_bottom = []
+                let c_top = []
+                for (let i = 0; i < sides; i++) {
+                    c_bottom.push(i)
+                    c_top.push(sides + i)
+                    new_model.edges.push([i, sides + i])
+                }
+
+                c_bottom.push(0)
+
+                c_top.push(sides)
+                new_model.edges.push(c_bottom)
+                new_model.edges.push(c_top)
+
+                //return new_model;
+            }
+            this.scene.models[i] = new_model;
+        }
+        
+    }
+
 };
