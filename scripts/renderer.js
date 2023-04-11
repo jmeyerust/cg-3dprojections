@@ -61,9 +61,57 @@ class Renderer {
 
     //
     draw() {
+
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
+
+
         console.log('draw()');
+        let prp = this.scene.view.prp;
+        let srp = this.scene.view.srp;
+
+        let vup = this.scene.view.vup;
+        let clip = this.scene.view.clip;
+        let z_min = -clip[4]/clip[5]
+
+        let canon_transform = mat4x4Perspective(prp, srp, vup, clip);
+        console.log(canon_transform);
+        let model_arr = this.scene.models;
+
+        let newLines = [];
+        for(let i = 0; i < model_arr.length; i++){
+            let vertex_arr = model_arr[i].vertices;
+            let edges_arr = model_arr[i].edges;
+
+            // Changing the Vertices to Canon view
+            for(let j = 0; j < vertex_arr.length; j++){
+                vertex_arr[j] = Matrix.multiply([canon_transform, vertex_arr[j]]);
+            }
+
+            // Applying Clipping
+            for(let k = 0; k < edges_arr.length; k++){
+                for (let l = 0; l < edges_arr[k].length -1; l++){
+                    let line = {pt0: vertex_arr[edges_arr[k][l]], 
+                                pt1: vertex_arr[edges_arr[k][l+1]]};
+                    let newLine = this.clipLinePerspective(line, z_min);
+                    newLines.push(newLine);
+                    }
+            }
+
+
+            for (let pt = 0; pt < newLines.length; pt++){
+                let viewPort = mat4x4Viewport(this.canvas.width, this.canvas.height);
+                let newPt0 = Matrix.multiply([mat4x4MPer(), newLines[pt].pt0]);
+                newPt0 = Matrix.multiply([viewPort, newPt0]); 
+    
+
+                let newPt1 = Matrix.multiply([mat4x4MPer(), newLines[pt].pt1]);
+                newPt1 = Matrix.multiply([viewPort, newPt1]);
+                this.drawLine(newPt0.x/newPt0.w, newPt0.y/newPt0.w, newPt1.x/newPt1.w, newPt1.y/newPt1.w);
+            
+            }
+         
+        }
 
         // Test:
         for (let i=0; i<this.scene.models.length; i++) {
@@ -126,13 +174,72 @@ class Renderer {
     // z_min:        float (near clipping plane in canonical view volume)
     clipLinePerspective(line, z_min) {
         let result = null;
-        let p0 = Vector3(line.pt0.x, line.pt0.y, line.pt0.z); 
-        let p1 = Vector3(line.pt1.x, line.pt1.y, line.pt1.z);
+        let p0 = line.pt0;
+        let p1 = line.pt1;
         let out0 = this.outcodePerspective(p0, z_min);
         let out1 = this.outcodePerspective(p1, z_min);
         
+        let dx = p1.x - p0.x;
+        let dy = p1.y - p0.y;
+        let dz = p1.z - p0.z;
+        if(out0 | out1 == 0){
+            result = line;
+        }
+        else if(out0 && out1 != 0){
+            result = null;
+        }
+        else{
+            if (out0 == 0){
+                t0 = 0;
+            }
+            else if(out0 == LEFT){
+                t0 = (-p0.x + p0.z)/(dx - dz);
+            }
+            else if(out0 == RIGHT){
+                t0 = (p0.x + p0.z)/(-dx - dz);
+            }
+            else if(out0 == BOTTOM){
+                t0 = (-p0.y + p0.z)/(dy - dz);
+            }
+            else if(out0 == TOP){
+                t0 = (p0.y + p0.z)/(-dy - dz);
+            }
+            else if (out0 == NEAR){
+                t0 = (p0.z -z_min)/-dz;
+            }
+            else{
+                t0 = (-p0.z - 1)/dz;
+            }
 
-        
+
+            if (out1 == 0){
+                t1 = 0;
+            }
+            else if(out1 == LEFT){
+                t1 = (p1.x + p1.z)/(dx - dz);
+            }
+            else if(out1 == RIGHT){
+                t1 = (p1.x + p1.z)/(-dx - dz);
+            }
+            else if(out1 == BOTTOM){
+                t1 = (-p1.y + p1.z)/(dy - dz);
+            }
+            else if(out1 == TOP){
+                t1 = (-p1.y + p1.z)/(dy - dz);
+            }
+            else if (out1 == NEAR){
+                t1 = (p1.z -z_min)/-dz;
+            }
+            else{
+                t1 = (-p1.z - 1)/dz;
+            }
+            
+            newLine = {pt0: new Vector4(p0.x + t0*dx, p0.y + t0*dy, p0.z + t0*dz, 1),
+                       pt1: new Vector4(p1.x + t1*dx, p1.y + t1*dy, p1.z + t1*dz, 1)};
+            
+            result = this.clipLinePerspective(newLine, z_min);
+
+        } 
         // TODO: implement clipping here!
         
         return result;

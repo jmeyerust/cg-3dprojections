@@ -6,40 +6,43 @@ function mat4x4Perspective(prp, srp, vup, clip) {
     // 4. scale such that view volume bounds are ([z,-z], [z,-z], [-1,zmin])
 
     // Calculate nuv coords
-    let n = prp.subtract(srp).normalize();
-    let u = vup.cross(n).normalize();
+
+    let n = prp.subtract(srp);
+    nmag = n.magnitude();
+    n.values = [n.x/nmag, n.y/nmag, n.z/nmag];
+
+    let u = vup.cross(n)
+    umag = u.magnitude();
+    u.values = [u.x/umag, u.y/umag, u.z/umag];
+
     let v = n.cross(u);
 
-    let CW = Vector3((clip[0]+clip[1])/2, (clip[2] + clip[3])/2, clip[4]);
+    let CW = Vector3((clip[0]+clip[1])/2, (clip[2] + clip[3])/2, -1*clip[4]);
     let DOP = CW
 
     // Create Transforms for canonical view  
     let Tprp = new Matrix(4,4)
     mat4x4Translate(Tprp, -prp.x, -prp.y, -prp.z)
+    
 
     let R = new Matrix(4,4)
     R.values = [[u.x, u.y, u.z, 0],
                 [v.x, v.y, v.z, 0],
                 [n.x, n.y, n.z, 0],
                 [0, 0, 0, 1]];
-    
     let SHpar = new Matrix(4,4);
     mat4x4ShearXY(SHpar, -DOP.x/DOP.z, -DOP.y/DOP.z);
     
-    let Tpar = new Matrix(4,4);
-    mat4x4Translate(Tpar, 0, 0, clip[4]);
-    
-    let Sparx = 2/(clip[1] - clip[0]);
-    let Spary = 2/(clip[3] - clip[2]);
-    let Sparz = 1/(clip[5] - clip[4]);
-    let Spar = new Matrix(4,4);
-    mat4x4Scale(Spar, Sparx, Spary, Sparz);
-    
+    let Sperx = 2*clip[4]/((clip[1] - clip[0])*clip[5]);
+    let Spery = 2*clip[4]/((clip[3] - clip[2])*clip[5]);
+    let Sperz = 1/(clip[5]);  
+    let Sper = new Matrix(4,4);
+    mat4x4Scale(Sper, Sperx, Spery, Sperz);
+    console.log(Sper);
     //Multipling 
     let transform = Matrix.multiply([R, Tprp]);
     transform = Matrix.multiply([SHpar, transform]);
-    transform = Matrix.multiply([Tpar, transform]);
-    transform = Matrix.multiply([Spar, transform]);
+    transform = Matrix.multiply([Sper, transform]);
 
     return transform;
 
@@ -61,6 +64,11 @@ function mat4x4MPer() {
 // create a 4x4 matrix to translate/scale projected vertices to the viewport (window)
 function mat4x4Viewport(width, height) {
     let viewport = new Matrix(4, 4);
+    viewport.values = [[parseInt(width/2), 0, 0, parseInt(width/2)],
+                        [0, parseInt(height/2), 0, parseInt(height/2)],
+                        [0, 0, 1, 0],
+                        [0, 0, 0, 1]];
+                        
     // viewport.values = ...;
 
 
