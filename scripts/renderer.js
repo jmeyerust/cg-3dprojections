@@ -15,51 +15,32 @@ class Renderer {
         this.canvas.height = canvas.height;
         this.ctx = this.canvas.getContext('2d');
         this.scene = this.processScene(scene);
-        this.enable_animation = false;  // <-- disabled for easier debugging; enable for animation
+        this.enable_animation = true;  // <-- disabled for easier debugging; enable for animation
         this.start_time = null;
         this.prev_time = null;
+        this.rot_mat = new Matrix(4, 4);
+        this.delta = 0;
     }
 
     //
     updateTransforms(time, delta_time) {
+        console.log(delta_time);
         // TODO: update any transformations needed for animation
         // Takes in time, should transform vertices of any models that need to rotate here, then gets redrawn
         
         for (let model in this.scene.models) {
             if (model.hasOwnProperty("animation")) {
-                // translate each vertex to origin
-                // rotate
-                // translate back
-                let moveToCenter = new Matrix(4, 4);
-                mat4x4Translate(moveToCenter, -model.center.x, -model.center.y, -model.center.z);
-                let moveBack = new Matrix(4, 4);
-                mat4x4Translate(moveBack, model.center.x, model.center.y, model.center.z);
-
+                this.delta = this.delta + ((model.animation.rps*360) * delta_time / 1000 % 360);
+                console.log(this.delta);
                 if (model.animation.axis == "x") {
-                    let tx = (model.animation.rps*360) * delta_time / 1000 % 360; 
-                    let rotMat = new Matrix(4, 4);
-                    mat4x4RotateX(rotMat, tx);
-                } else if (model.animation.axis = "y") {
-                    let ty = (model.animation.rps*360) * delta_time / 1000 % 360; 
-                    let rotMat = new Matrix(4, 4);
-                    mat4x4RotateY(rotMat, ty);
+                    mat4x4RotateX(this.rot_mat, this.delta);
+                } else if (model.animation.axis == "y") {
+                    mat4x4RotateY(this.rot_mat, this.delta);
                 } else {
-                    let tz = (model.animation.rps*360) * delta_time / 1000 % 360; 
-                    let rotMat = new Matrix(4, 4);
-                    mat4x4RotateY(rotMat, tz);
+                    mat4x4RotateZ(this.rot_mat, this.delta);
                 }
-
-                let finalMat = moveBack.mult(rotMat);
-                finalMat = finalMat.mult(moveToCenter);
-
-                for (let v in model.vertices) {
-                    v = finalMat.mult(v);
-                }
-
             }
         }
-        
-
     }
 
     //
@@ -99,7 +80,7 @@ class Renderer {
     moveForward() {
         this.scene.view.prp.z = this.scene.view.prp.z - 1;
         this.scene.view.srp.z = this.scene.view.srp.z - 1;
-        console.log(this.scene.view.prp.z, this.scene.view.srp.z);
+        
 
         this.draw();
     }
@@ -109,7 +90,6 @@ class Renderer {
 
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-        this.createVertexEdgeModel();
 
         console.log('draw()');
         let prp = this.scene.view.prp;
@@ -119,8 +99,25 @@ class Renderer {
         let clip = this.scene.view.clip;
         let z_min = -clip[4]/clip[5];
 
+        // Added by Jackson - trying to work on rotate
+        for (let model in this.scene.models) {
+            if (model.hasOwnProperty("animation")) {
+                let move_to_center = new Matrix(4, 4);
+                mat4x4Translate(move_to_center, -model.center.x, -model.center.y, -model.center.z);
+                let final_mat = new Matrix(4, 4);
+                mat4x4Translate(final_mat, model.center.x, model.center.y, model.center.z);
+
+                final_mat.mult(this.rot_mat);
+                final_mat.mult(move_to_center);
+
+                for (let v in model.vertices) {
+                    v = final_mat.mult(v);
+                }
+            }
+        }
+
         let canon_transform = mat4x4Perspective(prp, srp, vup, clip);
-        console.log(canon_transform);
+        //console.log(canon_transform);
         let model_arr = this.scene.models;
 
         let newLines = [];
@@ -294,6 +291,7 @@ class Renderer {
     //
     updateScene(scene) {
         this.scene = this.processScene(scene);
+        this.createVertexEdgeModel();
         if (!this.enable_animation) {
             this.draw();
         }
@@ -412,10 +410,6 @@ class Renderer {
                     [3, 7]
                 ])
                 
-                console.log(new_model.vertices);
-                console.log(new_model.edges);
-
-                //return new_model;
                 
             } else if (original_model.type == "cone") {
                 new_model = {
