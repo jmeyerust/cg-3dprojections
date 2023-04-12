@@ -38,7 +38,6 @@ function mat4x4Perspective(prp, srp, vup, clip) {
     let Sperz = 1/(clip[5]);  
     let Sper = new Matrix(4,4);
     mat4x4Scale(Sper, Sperx, Spery, Sperz);
-    console.log(Sper);
     //Multipling 
     let transform = Matrix.multiply([R, Tprp]);
     transform = Matrix.multiply([SHpar, transform]);
