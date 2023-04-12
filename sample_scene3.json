@@ -1,0 +1,33 @@
+{
+    "view": {
+        "prp": [20, 10, -10],
+        "srp": [20, 20, -20],
+        "vup": [0, 1, 0],
+        "clip": [-4, 20, -1, 17, 5, 75]
+    },
+    "models": [
+        {
+            "type": "cube",
+            "center": [40, 40, -10],
+            "width": 5,
+            "height": 10,
+            "depth": 1,
+            "animation": {
+                "axis": "x",
+                "rps": 1
+            }
+        },
+        {
+            "type": "sphere",
+            "center": [30, 20, -10],
+            "radius": 4,
+            "slices": 10,
+            "stacks": 10,
+            "animation": {
+                "axis": "z",
+                "rps": 3
+            }
+            
+        }
+    ]
+}

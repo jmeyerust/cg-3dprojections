@@ -24,21 +24,28 @@ class Renderer {
 
     //
     updateTransforms(time, delta_time) {
-        console.log(delta_time);
         // TODO: update any transformations needed for animation
         // Takes in time, should transform vertices of any models that need to rotate here, then gets redrawn
         
-        for (let model in this.scene.models) {
+        for (let i = 0; i < this.scene.models.length; i++) {
+            let model = this.scene.models[i];
             if (model.hasOwnProperty("animation")) {
                 this.delta = this.delta + ((model.animation.rps*360) * delta_time / 1000 % 360);
-                console.log(this.delta);
                 if (model.animation.axis == "x") {
-                    mat4x4RotateX(this.rot_mat, this.delta);
+                    mat4x4RotateX(model.matrix, this.delta);
                 } else if (model.animation.axis == "y") {
-                    mat4x4RotateY(this.rot_mat, this.delta);
+                     mat4x4RotateY(model.matrix, this.delta);
                 } else {
-                    mat4x4RotateZ(this.rot_mat, this.delta);
+                    mat4x4RotateZ(model.matrix, this.delta);
                 }
+                let transAnim = new Matrix(4,4);
+                mat4x4Translate(transAnim, -model.center.x, -model.center.y, -model.center.z)
+                model.matrix = Matrix.multiply([model.matrix, transAnim]);
+
+                mat4x4Translate(transAnim, model.center.x, model.center.y, model.center.z)
+                model.matrix = Matrix.multiply([transAnim, model.matrix]);
+
+
             }
         }
     }
@@ -186,8 +193,8 @@ class Renderer {
     draw() {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-        console.log(this.scene.models[0].vertices[0].z);
         console.log('draw()');  
+
 
         let prp = this.scene.view.prp;
         let srp = this.scene.view.srp;
@@ -221,14 +228,15 @@ class Renderer {
         let newLines = [];
         for(let i = 0; i < model_arr.length; i++){
             let vertex_arr = [];
-            
-            
             let edges_arr = model_arr[i].edges;
+            for(let j = 0; j < model_arr[i].vertices.length; j++){
+                vertex_arr.push(Matrix.multiply([model_arr[i].matrix, model_arr[i].vertices[j]])); 
+            }
 
             // Changing the Vertices to Canon view
             for(let j = 0; j < model_arr[i].vertices.length; j++){
-                vertex_arr.push(Matrix.multiply([canon_transform, model_arr[i].vertices[j]]));
-                
+                // vertex_arr.push(Matrix.multiply([canon_transform, model_arr[i].vertices[j]]));
+                vertex_arr[j] = Matrix.multiply([canon_transform, vertex_arr[j]]); 
 
             }
 
@@ -328,12 +336,11 @@ class Renderer {
             result = null;
         }
         else{
-            let t0 = 0;
-            let t1 = 0;
-            if (out0 == 0){
-                t0 = 0;
-            }
-            else if(out0 >= LEFT){
+            let t0 = null;
+            let t1 = null;
+
+
+            if(out0 >= LEFT){
                 t0 = (-p0.x + p0.z)/(dx - dz);
             }
             else if(out0 >= RIGHT){
@@ -348,15 +355,11 @@ class Renderer {
             else if (out0 >= NEAR){
                 t0 = (p0.z -z_min)/-dz;
             }
-            else if (out0 >= 1){
+            else if (out0 >= FAR){
                 t0 = (-p0.z - 1)/dz;
             }
-
-
-            if (out1 == 0){
-                t1 = 0;
-            }
-            else if(out1 >= LEFT){
+            
+            if(out1 >= LEFT){
                 t1 = (-p1.x + p1.z)/(dx - dz);
             }
             else if(out1 >= RIGHT){
@@ -371,13 +374,12 @@ class Renderer {
             else if (out1 >= NEAR){
                 t1 = (p1.z -z_min)/(-dz) ;
             }
-            else if (out0 >= 1){
+            else if (out0 >= FAR){
                 t1 = (-p1.z - 1)/dz;
             }
             
             let newLine = {pt0: new Vector4(p0.x + t0*dx, p0.y + t0*dy, p0.z + t0*dz, 1),
                        pt1: new Vector4(p1.x + t1*dx, p1.y + t1*dy, p1.z + t1*dz, 1)};
-            
             result = this.clipLinePerspective(newLine, z_min);
 
         } 
@@ -418,7 +420,7 @@ class Renderer {
         this.scene = this.processScene(scene);
         this.createVertexEdgeModel();
         if (!this.enable_animation) {
-            this.createVertexEdgeModel();
+            // this.createVertexEdgeModel();
             this.draw();
 
         }
@@ -500,8 +502,13 @@ class Renderer {
                     edges: [],
                     matrix: new Matrix(4,4),
                     center: original_model.center,
-                    animation: original_model.animation
                 }
+
+                if (original_model.hasOwnProperty('animation')) {
+                    new_model.animation = {axis: original_model.animation.axis,
+                                           rps:  original_model.animation.rps};
+                };
+
 
                 let width = original_model.width / 2
                 let height = original_model.height / 2
@@ -545,6 +552,10 @@ class Renderer {
                     matrix: new Matrix(4, 4),
                     center: original_model.center
                 }
+                if (original_model.hasOwnProperty('animation')) {
+                    new_model.animation = {axis: original_model.animation.axis,
+                                           rps:  original_model.animation.rps}
+                }
 
                 let radius = original_model.radius;
                 let height = original_model.height;
@@ -568,6 +579,7 @@ class Renderer {
                 new_model.edges.push([...Array(sides).keys(), 0])
             
                 for (let i = 0; i < new_model.vertices.length - 1; i++) {
+
                     new_model.edges.push([i, new_model.vertices.length - 1])
                 }
 
@@ -580,6 +592,10 @@ class Renderer {
                     edges: [],
                     matrix: new Matrix(4, 4),
                     center: original_model.center
+                }
+                if (original_model.hasOwnProperty('animation')) {
+                    new_model.animation = {axis: original_model.animation.axis,
+                                           rps: original_model.animation.rps}
                 }
 
                 let radius = original_model.radius;
@@ -620,10 +636,64 @@ class Renderer {
                 new_model.edges.push(c_bottom)
                 new_model.edges.push(c_top)
 
-                console.log(new_model.vertices);
-                console.log(new_model.edges);
+                
+                
+                
 
                 //return new_model;
+            }
+            else if (original_model.type == "sphere") {
+                new_model = {
+                    type: "sphere",
+                    vertices: [],
+                    edges: [],
+                    matrix: new Matrix(4, 4),
+                    center: original_model.center
+                }
+                if (original_model.hasOwnProperty('animation')) {
+                    new_model.animation = {axis: original_model.animation.axis,
+                                           rps: original_model.animation.rps}
+                }
+
+                let radius = original_model.radius;
+                let slices = original_model.slices;
+                let stacks = original_model.stacks;
+                
+                for (let i =0; i < slices; i++){
+                    for(let j =0; j < stacks; j++){
+                        let x = Math.cos(2*Math.PI*j/stacks) * Math.sin(2*Math.PI*i/slices);
+                        let y = Math.sin(2*Math.PI*j/stacks) *  Math.sin(2*Math.PI*i/slices);
+                        let z = Math.cos(2*Math.PI*i/slices);
+                        let new_vertex = new Vector4(x, y, z, 1);
+                        new_model.vertices.push(new_vertex);
+
+                    
+                    }
+                    let new_edge =[];
+                        for(let k=0; k < stacks; k++){
+                            new_edge.push(k + i*slices)
+                        }
+                    new_edge.push(i*slices);
+                    new_model.edges.push(new_edge);
+
+                    new_edge =[];
+                    for(let k=0; k < stacks; k++){
+                            new_edge.push(i + k*stacks)
+                    }
+                    new_edge.push(i);
+                    new_model.edges.push(new_edge);
+                }
+                let sphere_scale = new Matrix(4,4);
+                mat4x4Scale(sphere_scale, radius, radius, radius);
+                let sphere_trans = new Matrix(4,4);
+                mat4x4Translate(sphere_trans,original_model.center.x, original_model.center.y, original_model.center.z );
+
+                sphere_trans = Matrix.multiply([sphere_trans, sphere_scale]);
+
+                for (let i =0; i < new_model.vertices.length; i++){
+                    new_model.vertices[i] = Matrix.multiply([sphere_trans, new_model.vertices[i]]);
+                }
+
             }
             this.scene.models[i] = new_model;
         }
