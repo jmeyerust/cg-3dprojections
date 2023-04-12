@@ -45,14 +45,43 @@ class Renderer {
 
     //
     rotateLeft() {
-        this.scene.view.srp.x = this.scene.view.srp.x-2;
-        this.draw();
+        let prp = this.scene.view.prp;
+        let srp = this.scene.view.srp;
+        let vup = this.scene.view.vup;
+        let n = prp.subtract(srp);
+        nmag = n.magnitude();
+        n.values = [n.x/nmag, n.y/nmag, n.z/nmag];
+        let u = vup.cross(n);
+        umag = u.magnitude();
+        u.values = [u.x/umag, u.y/umag, u.z/umag];
+
+        srp = srp.subtract(u);
+        // let dotSrp = srp.dot(prp);
+        // let Srpmag = srp.magnitude();
+        // srp.values = [dotSrp*srp.x/Srpmag**2, dotSrp*srp.y/Srpmag**2, dotSrp*srp.z/Srpmag**2];
+
+        this.scene.view.srp = srp;
+
+        this.draw()
     }
     
     //
     rotateRight() {
-        this.scene.view.srp.x = this.scene.view.srp.x+2;
-        this.draw();
+        let prp = this.scene.view.prp;
+        let srp = this.scene.view.srp;
+        let vup = this.scene.view.vup;
+
+        let n = prp.subtract(srp);
+        nmag = n.magnitude();
+        n.values = [n.x/nmag, n.y/nmag, n.z/nmag];
+
+        let u = vup.cross(n);
+        umag = u.magnitude();
+        u.values = [u.x/umag, u.y/umag, u.z/umag];
+
+        srp = srp.add(u);
+        this.scene.view.srp = srp;
+        this.draw()
     }
     
     //
