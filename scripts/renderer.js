@@ -166,6 +166,7 @@ class Renderer {
         let clip = this.scene.view.clip;
         let z_min = -clip[4]/clip[5];
 
+        /*
         // Added by Jackson - trying to work on rotate
         for (let model in this.scene.models) {
             if (model.hasOwnProperty("animation")) {
@@ -182,6 +183,7 @@ class Renderer {
                 }
             }
         }
+        */
 
         let canon_transform = mat4x4Perspective(prp, srp, vup, clip);
 
@@ -190,6 +192,7 @@ class Renderer {
         let newLines = [];
         for(let i = 0; i < model_arr.length; i++){
             let vertex_arr = [];
+            
             
             let edges_arr = model_arr[i].edges;
 
@@ -203,8 +206,8 @@ class Renderer {
             // Applying Clipping    
             for(let k = 0; k < edges_arr.length; k++){
                 for (let l = 0; l < edges_arr[k].length -1; l++){
-                    let line = {pt0: new_vertices[edges_arr[k][l]], 
-                                pt1: new_vertices[edges_arr[k][l+1]]};
+                    let line = {pt0: vertex_arr[edges_arr[k][l]], 
+                                pt1: vertex_arr[edges_arr[k][l+1]]};
                     let newLine = this.clipLinePerspective(line, z_min);
                     if (newLine != null){
                         newLines.push(newLine);
