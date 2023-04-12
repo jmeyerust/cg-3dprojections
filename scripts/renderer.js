@@ -23,40 +23,85 @@ class Renderer {
     //
     updateTransforms(time, delta_time) {
         // TODO: update any transformations needed for animation
+        // Takes in time, should transform vertices of any models that need to rotate here, then gets redrawn
+        
+        for (let model in this.scene.models) {
+            if (model.hasOwnProperty("animation")) {
+                // translate each vertex to origin
+                // rotate
+                // translate back
+                let moveToCenter = new Matrix(4, 4);
+                mat4x4Translate(moveToCenter, -model.center.x, -model.center.y, -model.center.z);
+                let moveBack = new Matrix(4, 4);
+                mat4x4Translate(moveBack, model.center.x, model.center.y, model.center.z);
+
+                if (model.animation.axis == "x") {
+                    let tx = (model.animation.rps*360) * delta_time / 1000 % 360; 
+                    let rotMat = new Matrix(4, 4);
+                    mat4x4RotateX(rotMat, tx);
+                } else if (model.animation.axis = "y") {
+                    let ty = (model.animation.rps*360) * delta_time / 1000 % 360; 
+                    let rotMat = new Matrix(4, 4);
+                    mat4x4RotateY(rotMat, ty);
+                } else {
+                    let tz = (model.animation.rps*360) * delta_time / 1000 % 360; 
+                    let rotMat = new Matrix(4, 4);
+                    mat4x4RotateY(rotMat, tz);
+                }
+
+                let finalMat = moveBack.mult(rotMat);
+                finalMat = finalMat.mult(moveToCenter);
+
+                for (let v in model.vertices) {
+                    v = finalMat.mult(v);
+                }
+
+            }
+        }
+        
+
     }
 
     //
     rotateLeft() {
-
+        this.scene.view.srp.x = this.scene.view.srp.x-2;
+        this.draw();
     }
     
     //
     rotateRight() {
-
+        this.scene.view.srp.x = this.scene.view.srp.x+2;
+        this.draw();
     }
     
     //
     moveLeft() {
-        this.scene.prp[0] -= 1;
-        this.scene.srp[0] -= 1;
+        this.scene.view.prp.x = this.scene.view.prp.x - 1;
+        this.scene.view.srp.x = this.scene.view.srp.x - 1;
+        this.draw();
     }
     
     //
     moveRight() {
-        this.scene.prp[0] += 1;
-        this.scene.srp[0] += 1;
+        this.scene.view.prp.x = this.scene.view.prp.x + 1;
+        this.scene.view.srp.x = this.scene.view.srp.x + 1;
+        this.draw();
     }
     
     //
     moveBackward() {
-        this.scene.prp[2] += 1;
-        this.scene.srp[2] += 1;
+        this.scene.view.prp.z = this.scene.view.prp.z + 1;
+        this.scene.view.srp.z = this.scene.view.srp.z + 1;
+        this.draw();
     }
     
     //
     moveForward() {
-        this.scene.prp[2] -= 1;
-        this.scene.srp[2] -= 1;
+        this.scene.view.prp.z = this.scene.view.prp.z - 1;
+        this.scene.view.srp.z = this.scene.view.srp.z - 1;
+        console.log(this.scene.view.prp.z, this.scene.view.srp.z);
+
+        this.draw();
     }
 
     //
@@ -64,7 +109,7 @@ class Renderer {
 
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-
+        this.createVertexEdgeModel();
 
         console.log('draw()');
         let prp = this.scene.view.prp;
@@ -72,7 +117,7 @@ class Renderer {
 
         let vup = this.scene.view.vup;
         let clip = this.scene.view.clip;
-        let z_min = -clip[4]/clip[5]
+        let z_min = -clip[4]/clip[5];
 
         let canon_transform = mat4x4Perspective(prp, srp, vup, clip);
         console.log(canon_transform);
@@ -82,17 +127,18 @@ class Renderer {
         for(let i = 0; i < model_arr.length; i++){
             let vertex_arr = model_arr[i].vertices;
             let edges_arr = model_arr[i].edges;
+            let new_vertices = [];
 
             // Changing the Vertices to Canon view
             for(let j = 0; j < vertex_arr.length; j++){
-                vertex_arr[j] = Matrix.multiply([canon_transform, vertex_arr[j]]);
+                new_vertices[j] = Matrix.multiply([canon_transform, vertex_arr[j]]);
             }
 
             // Applying Clipping
             for(let k = 0; k < edges_arr.length; k++){
                 for (let l = 0; l < edges_arr[k].length -1; l++){
-                    let line = {pt0: vertex_arr[edges_arr[k][l]], 
-                                pt1: vertex_arr[edges_arr[k][l+1]]};
+                    let line = {pt0: new_vertices[edges_arr[k][l]], 
+                                pt1: new_vertices[edges_arr[k][l+1]]};
                     let newLine = this.clipLinePerspective(line, z_min);
                     newLines.push(newLine);
                     }
@@ -112,33 +158,6 @@ class Renderer {
             }
          
         }
-
-        // Test:
-        for (let i=0; i<this.scene.models.length; i++) {
-            console.log(this.createVertexEdgeModel(this.scene.models[i]));
-        }
-
-        // TODO: implement drawing here!
-        // For each model
-        //   * For each vertex
-        //     * transform endpoints to canonical view volume
-        //   * For each line segment in each edge
-        //     * clip in 3D
-        //
-        //     Mine
-        //     * project to 2D
-        //     * translate/scale to viewport (i.e. window)
-        //     * draw line
-
-        // Transform vertices, clip lines, scale, draw if not null
-        // Possibly make one function to decompose each type of model into vertices/edges and then use that for this part since it aligns w/
-        //      previous learnings
-
-        /*
-        for (let i=0; i<this.scene.models.length; i++) {
-           for (let j=0; i<this.scene.models[i].)
-        }
-        */
 
     }
 
@@ -363,6 +382,8 @@ class Renderer {
                 let width = original_model.width / 2
                 let height = original_model.height / 2
                 let depth = original_model.depth / 2
+
+
 
                 new_model.vertices.push(...[
                     Vector4(-width, height, -depth, 1),
