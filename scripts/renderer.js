@@ -193,9 +193,7 @@ class Renderer {
         //      previous learnings
 
         /*
-        for (let i=0; i<this.scene.models.length; i++) {
-           for (let j=0; i<this.scene.models[i].)
-        }
+        
         */
 
     }
@@ -252,22 +250,22 @@ class Renderer {
             if (out0 == 0){
                 t0 = 0;
             }
-            else if(out0 == LEFT){
+            else if(out0 >= LEFT){
                 t0 = (-p0.x + p0.z)/(dx - dz);
             }
-            else if(out0 == RIGHT){
+            else if(out0 >= RIGHT){
                 t0 = (p0.x + p0.z)/(-dx - dz);
             }
-            else if(out0 == BOTTOM){
+            else if(out0 >= BOTTOM){
                 t0 = (-p0.y + p0.z)/(dy - dz);
             }
-            else if(out0 == TOP){
+            else if(out0 >= TOP){
                 t0 = (p0.y + p0.z)/(-dy - dz);
             }
-            else if (out0 == NEAR){
+            else if (out0 >= NEAR){
                 t0 = (p0.z -z_min)/-dz;
             }
-            else{
+            else if (out0 >= 1){
                 t0 = (-p0.z - 1)/dz;
             }
 
@@ -275,22 +273,22 @@ class Renderer {
             if (out1 == 0){
                 t1 = 0;
             }
-            else if(out1 == LEFT){
+            else if(out1 >= LEFT){
                 t1 = (-p1.x + p1.z)/(dx - dz);
             }
-            else if(out1 == RIGHT){
+            else if(out1 >= RIGHT){
                 t1 = (p1.x + p1.z)/(-dx - dz);
             }
-            else if(out1 == BOTTOM){
+            else if(out1 >= BOTTOM){
                 t1 = (-p1.y + p1.z)/(dy - dz);
             }
-            else if(out1 == TOP){
+            else if(out1 >= TOP){
                 t1 = (p1.y + p1.z)/(-dy - dz);
             }
-            else if (out1 == NEAR){
-                t1 = (p1.z -z_min)/-dz;
+            else if (out1 >= NEAR){
+                t1 = (p1.z -z_min)/(-dz) ;
             }
-            else{
+            else if (out0 >= 1){
                 t1 = (-p1.z - 1)/dz;
             }
             
