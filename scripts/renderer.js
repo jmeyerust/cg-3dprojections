@@ -15,28 +15,78 @@ class Renderer {
         this.canvas.height = canvas.height;
         this.ctx = this.canvas.getContext('2d');
         this.scene = this.processScene(scene);
-        this.enable_animation = false;  // <-- disabled for easier debugging; enable for animation
+        this.enable_animation = true;  // <-- disabled for easier debugging; enable for animation
         this.start_time = null;
         this.prev_time = null;
+        this.rot_mat = new Matrix(4, 4);
+        this.delta = 0;
     }
 
     //
     updateTransforms(time, delta_time) {
+        console.log(delta_time);
         // TODO: update any transformations needed for animation
+        // Takes in time, should transform vertices of any models that need to rotate here, then gets redrawn
+        
+        for (let model in this.scene.models) {
+            if (model.hasOwnProperty("animation")) {
+                this.delta = this.delta + ((model.animation.rps*360) * delta_time / 1000 % 360);
+                console.log(this.delta);
+                if (model.animation.axis == "x") {
+                    mat4x4RotateX(this.rot_mat, this.delta);
+                } else if (model.animation.axis == "y") {
+                    mat4x4RotateY(this.rot_mat, this.delta);
+                } else {
+                    mat4x4RotateZ(this.rot_mat, this.delta);
+                }
+            }
+        }
     }
 
     //
     rotateLeft() {
+        let prp = this.scene.view.prp;
+        let srp = this.scene.view.srp;
+        let vup = this.scene.view.vup;
+        let n = prp.subtract(srp);
+        nmag = n.magnitude();
+        n.values = [n.x/nmag, n.y/nmag, n.z/nmag];
+        let u = vup.cross(n);
+        umag = u.magnitude();
+        u.values = [u.x/umag, u.y/umag, u.z/umag];
 
+        srp = srp.subtract(u);
+        // let dotSrp = srp.dot(prp);
+        // let Srpmag = srp.magnitude();
+        // srp.values = [dotSrp*srp.x/Srpmag**2, dotSrp*srp.y/Srpmag**2, dotSrp*srp.z/Srpmag**2];
+
+        this.scene.view.srp = srp;
+
+        this.draw()
     }
     
     //
     rotateRight() {
+        let prp = this.scene.view.prp;
+        let srp = this.scene.view.srp;
+        let vup = this.scene.view.vup;
 
+        let n = prp.subtract(srp);
+        nmag = n.magnitude();
+        n.values = [n.x/nmag, n.y/nmag, n.z/nmag];
+
+        let u = vup.cross(n);
+        umag = u.magnitude();
+        u.values = [u.x/umag, u.y/umag, u.z/umag];
+
+        srp = srp.add(u);
+        this.scene.view.srp = srp;
+        this.draw()
     }
     
     //
     moveLeft() {
+
         let prp = this.scene.view.prp;
         let srp = this.scene.view.srp;
         let vup = this.scene.view.vup;
@@ -59,10 +109,12 @@ class Renderer {
         this.scene.view.srp = srp;
 
         this.draw()
+
     }
     
     //
     moveRight() {
+
         let prp = this.scene.view.prp;
         let srp = this.scene.view.srp;
         let vup = this.scene.view.vup;
@@ -81,10 +133,12 @@ class Renderer {
         this.scene.view.prp = prp;
         this.scene.view.srp = srp;
         this.draw()
+
     }
     
     //
     moveBackward() {
+
         let prp = this.scene.view.prp;
         let srp = this.scene.view.srp;
         let vup = this.scene.view.vup;
@@ -102,10 +156,12 @@ class Renderer {
         this.scene.view.prp = prp;
         this.scene.view.srp = srp;
         this.draw()
+
     }
     
     //
     moveForward() {
+
         let prp = this.scene.view.prp;
         let srp = this.scene.view.srp;
         let vup = this.scene.view.vup;
@@ -123,6 +179,7 @@ class Renderer {
         this.scene.view.prp = prp;
         this.scene.view.srp = srp;
         this.draw()
+
     }
 
     //
@@ -131,23 +188,48 @@ class Renderer {
 
         console.log(this.scene.models[0].vertices[0].z);
         console.log('draw()');  
+
         let prp = this.scene.view.prp;
         let srp = this.scene.view.srp;
         let vup = this.scene.view.vup;
         let clip = this.scene.view.clip;
-        let z_min = -clip[4]/clip[5]
+        let z_min = -clip[4]/clip[5];
+
+        /*
+        // Added by Jackson - trying to work on rotate
+        for (let model in this.scene.models) {
+            if (model.hasOwnProperty("animation")) {
+                let move_to_center = new Matrix(4, 4);
+                mat4x4Translate(move_to_center, -model.center.x, -model.center.y, -model.center.z);
+                let final_mat = new Matrix(4, 4);
+                mat4x4Translate(final_mat, model.center.x, model.center.y, model.center.z);
+
+                final_mat.mult(this.rot_mat);
+                final_mat.mult(move_to_center);
+
+                for (let v in model.vertices) {
+                    v = final_mat.mult(v);
+                }
+            }
+        }
+        */
 
         let canon_transform = mat4x4Perspective(prp, srp, vup, clip);
+
+
         let model_arr = this.scene.models;
         let newLines = [];
         for(let i = 0; i < model_arr.length; i++){
             let vertex_arr = [];
             
+            
             let edges_arr = model_arr[i].edges;
+
             // Changing the Vertices to Canon view
             for(let j = 0; j < model_arr[i].vertices.length; j++){
                 vertex_arr.push(Matrix.multiply([canon_transform, model_arr[i].vertices[j]]));
                 
+
             }
 
             // Applying Clipping    
@@ -173,6 +255,7 @@ class Renderer {
                 this.drawLine(newPt0.x/newPt0.w, newPt0.y/newPt0.w, newPt1.x/newPt1.w, newPt1.y/newPt1.w);
             
             }
+
         }
 
         
@@ -333,6 +416,7 @@ class Renderer {
     //
     updateScene(scene) {
         this.scene = this.processScene(scene);
+        this.createVertexEdgeModel();
         if (!this.enable_animation) {
             this.createVertexEdgeModel();
             this.draw();
@@ -423,6 +507,8 @@ class Renderer {
                 let height = original_model.height / 2
                 let depth = original_model.depth / 2
 
+
+
                 new_model.vertices.push(...[
                     Vector4(-width, height, -depth, 1),
                     Vector4(width, height, -depth, 1),
@@ -450,10 +536,6 @@ class Renderer {
                     [3, 7]
                 ])
                 
-                console.log(new_model.vertices);
-                console.log(new_model.edges);
-
-                //return new_model;
                 
             } else if (original_model.type == "cone") {
                 new_model = {
